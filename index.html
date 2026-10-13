@@ -281,6 +281,27 @@ nav.on-teal #slide-counter { color: rgba(0,42,58,.65); }
 
 /* Tight list */
 .tight li { padding: 3px 0 3px 20px; font-size: 18px; }
+
+/* ── Viewport-scaled text — overrides all fixed sizes above ── */
+.slide           { padding: 3vh 3.5vw; }
+.cols            { gap: 2vw; }
+.slide-label     { font-size: 1.2vw; }
+h1, h2           { font-size: 4vw; }
+h3               { font-size: 2vw; }
+p, li            { font-size: 1.75vw; }
+.tight li        { font-size: 1.6vw; }
+.flow-node       { font-size: 1.5vw; min-width: 10vw; }
+.flow-node small { font-size: 1.1vw; }
+.sec-num         { width: 2.6vw; height: 2.6vw; font-size: 1.2vw; }
+.sec-body strong { font-size: 1.6vw; }
+.sec-body span   { font-size: 1.45vw; }
+code             { font-size: 1.2vw; }
+.badge           { font-size: 1.0vw; }
+.title-eyebrow   { font-size: 1.3vw; }
+.title-main      { font-size: 5.5vw; }
+.title-sub       { font-size: 2vw; }
+#slide-counter   { font-size: 1.2vw; }
+.nav-btn         { font-size: 1.5vw; width: 3vw; height: 3vw; }
 </style>
 </head>
 <body>
@@ -302,7 +323,7 @@ nav.on-teal #slide-counter { color: rgba(0,42,58,.65); }
   <div class="rule"></div>
   <h2>What is this?</h2>
   <div class="content" style="margin-top:28px;">
-    <p style="font-size:24px; max-width:680px; color:#334; line-height:1.7;">
+    <p style="font-size:1.9vw; max-width:680px; color:#334; line-height:1.7;">
       A bridge that lets Claude — via its Model Context Protocol (MCP) — read and edit the contextflow WordPress site directly: theme files, pages, posts, and custom post types.
     </p>
     <div style="margin-top:40px;" class="cols cols-3">
@@ -394,7 +415,7 @@ nav.on-teal #slide-counter { color: rgba(0,42,58,.65); }
           <li><code>create_theme_file</code></li>
           <li><code>get_design_guidelines</code></li>
         </ul>
-        <p style="margin-top:10px; font-size:16px; color:#778;">php · css · js · json · html · svg · md</p>
+        <p style="margin-top:10px; font-size:1.35vw; color:#778;">php · css · js · json · html · svg · md</p>
       </div>
       <div class="col-card">
         <h3>Pages</h3>
@@ -405,7 +426,7 @@ nav.on-teal #slide-counter { color: rgba(0,42,58,.65); }
           <li><code>update_page</code></li>
           <li><code>delete_page</code></li>
         </ul>
-        <p style="margin-top:10px; font-size:16px; color:#778;">Includes page template assignment</p>
+        <p style="margin-top:10px; font-size:1.35vw; color:#778;">Includes page template assignment</p>
       </div>
       <div class="col-card">
         <h3>Posts &amp; CPTs</h3>
@@ -417,7 +438,7 @@ nav.on-teal #slide-counter { color: rgba(0,42,58,.65); }
           <li><code>delete_post</code></li>
           <li><code>upload_media</code></li>
         </ul>
-        <p style="margin-top:10px; font-size:16px; color:#778;">Works with any REST-enabled CPT</p>
+        <p style="margin-top:10px; font-size:1.35vw; color:#778;">Works with any REST-enabled CPT</p>
       </div>
     </div>
   </div>
@@ -471,7 +492,7 @@ nav.on-teal #slide-counter { color: rgba(0,42,58,.65); }
   <div class="rule"></div>
   <h2>How Claude knows the brand</h2>
   <div class="content" style="margin-top:28px;">
-    <p style="font-size:22px; max-width:700px;">
+    <p style="font-size:1.9vw; max-width:700px;">
       A <code>design-guide.md</code> file lives in the active WordPress theme root. Every time Claude connects, it is instructed to read this file before building anything.
     </p>
     <div class="cols cols-2" style="margin-top:32px;">
@@ -623,7 +644,7 @@ nav.on-teal #slide-counter { color: rgba(0,42,58,.65); }
       </div>
     </div>
     <div style="margin-top:24px; padding:16px; background:var(--light); border-radius:8px;">
-      <p style="font-size:17px; color:#556;"><strong>WordPress side:</strong> staging.contextflow.com sits behind AWS CloudFront. The plugin's "Skip IP check" toggle is enabled so CloudFront's rotating edge IPs don't block the MCP server's requests. Auth relies on the bearer token + HTTPS instead.</p>
+      <p style="font-size:1.4vw; color:#556;"><strong>WordPress side:</strong> staging.contextflow.com sits behind AWS CloudFront. The plugin's "Skip IP check" toggle is enabled so CloudFront's rotating edge IPs don't block the MCP server's requests. Auth relies on the bearer token + HTTPS instead.</p>
     </div>
   </div>
 </div>
