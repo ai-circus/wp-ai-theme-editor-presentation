@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WordPress AI Theme Editor — Architecture & Security</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --teal: #2AD2C9;
+  --navy: #002A3A;
+  --white: #ffffff;
+  --light: #f0fafa;
+  --mid: #d0f0ee;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--navy);
+  color: var(--navy);
+  overflow: hidden;
+}
+
+.deck {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: 44px 56px;
+  background: var(--white);
+}
+.slide.active { display: flex; }
+.slide.dark {
+  background: var(--navy);
+  color: var(--white);
+}
+.slide.teal {
+  background: var(--teal);
+  color: var(--navy);
+}
+
+/* Title rule above headings — contextflow pattern */
+.slide-label {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 10px;
+}
+.dark .slide-label { color: var(--teal); }
+.teal .slide-label { color: var(--navy); opacity: .6; }
+
+h1, h2 {
+  font-size: 50px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--navy);
+}
+.dark h1, .dark h2 { color: var(--white); }
+.teal h1, .teal h2 { color: var(--navy); }
+
+h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+.dark h3 { color: var(--teal); }
+
+p, li {
+  font-size: 20px;
+  line-height: 1.6;
+  color: #334;
+}
+.dark p, .dark li { color: #c8e8e6; }
+.teal p, .teal li { color: var(--navy); }
+
+ul { list-style: none; padding: 0; }
+ul li { padding: 5px 0 5px 20px; position: relative; }
+ul li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--teal);
+  font-weight: 700;
+}
+.dark ul li::before { color: var(--teal); }
+.teal ul li::before { color: var(--navy); opacity: .5; }
+
+.rule {
+  width: 56px;
+  height: 2px;
+  background: var(--teal);
+  margin-bottom: 20px;
+}
+.dark .rule { background: var(--teal); }
+.teal .rule { background: var(--navy); opacity: .3; }
+
+.content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+/* Two-column layout */
+.cols { display: grid; gap: 48px; }
+.cols-2 { grid-template-columns: 1fr 1fr; }
+.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* Column card */
+.col-card {
+  border-top: 2px solid var(--mid);
+  padding-top: 20px;
+}
+.dark .col-card { border-top-color: rgba(42,210,201,.2); }
+
+/* Flow diagram */
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 32px 0;
+}
+.flow-node {
+  background: var(--navy);
+  color: var(--white);
+  border-radius: 10px;
+  padding: 16px 22px;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  min-width: 130px;
+  line-height: 1.4;
+}
+.flow-node.teal-node {
+  background: var(--teal);
+  color: var(--navy);
+}
+.flow-node small {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  opacity: .7;
+  margin-top: 3px;
+}
+.flow-arrow {
+  flex: 1;
+  height: 2px;
+  background: var(--mid);
+  position: relative;
+}
+.flow-arrow::after {
+  content: '▶';
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--mid);
+  font-size: 15px;
+}
+.dark .flow-node { background: rgba(255,255,255,.1); }
+.dark .flow-node.teal-node { background: var(--teal); color: var(--navy); }
+.dark .flow-arrow { background: rgba(255,255,255,.15); }
+.dark .flow-arrow::after { color: rgba(255,255,255,.3); }
+
+/* Badge */
+.badge {
+  display: inline-block;
+  background: var(--teal);
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 4px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  margin-right: 6px;
+}
+.badge.red { background: #ff6b6b; color: #fff; }
+.badge.green { background: #2ecc71; color: #fff; }
+.badge.grey { background: #ccc; color: #333; }
+
+/* Security layer list */
+.sec-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--mid);
+}
+.sec-item:last-child { border-bottom: none; }
+.sec-num {
+  width: 34px;
+  height: 34px;
+  background: var(--teal);
+  color: var(--navy);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.sec-body { flex: 1; }
+.sec-body strong { font-size: 18px; color: var(--navy); display: block; }
+.sec-body span { font-size: 16px; color: #556; }
+
+/* Code */
+code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 15px;
+  background: var(--light);
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: var(--navy);
+}
+.dark code { background: rgba(42,210,201,.15); color: var(--teal); }
+
+/* Navigation */
+nav {
+  position: fixed;
+  bottom: 28px;
+  right: 36px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+}
+.nav-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--teal);
+  background: transparent;
+  color: var(--teal);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+}
+.nav-btn:hover { background: var(--teal); color: var(--navy); }
+#slide-counter {
+  font-size: 16px;
+  color: rgba(42,210,201,.7);
+  font-family: monospace;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* Title slide specifics */
+.title-eyebrow {
+  font-size: 16px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 24px;
+}
+.title-main {
+  font-size: 62px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.1;
+  margin-bottom: 20px;
+}
+.title-sub {
+  font-size: 24px;
+  color: rgba(255,255,255,.5);
+  max-width: 560px;
+}
+
+/* Tight list */
+.tight li { padding: 3px 0 3px 20px; font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- ── 1. Title ── -->
+<div class="slide dark active">
+  <div class="content">
+    <p class="title-eyebrow">contextflow · WordPress AI Integration</p>
+    <div class="rule"></div>
+    <h1 class="title-main">WordPress AI<br>Theme Editor</h1>
+    <p class="title-sub">Architecture, workflow, and security model for the Claude MCP bridge</p>
+  </div>
+</div>
+
+<!-- ── 2. What is it ── -->
+<div class="slide">
+  <div class="slide-label">Overview</div>
+  <div class="rule"></div>
+  <h2>What is this?</h2>
+  <div class="content" style="margin-top:28px;">
+    <p style="font-size:24px; max-width:680px; color:#334; line-height:1.7;">
+      A bridge that lets Claude — via its Model Context Protocol (MCP) — read and edit the contextflow WordPress site directly: theme files, pages, posts, and custom post types.
+    </p>
+    <div style="margin-top:40px;" class="cols cols-3">
+      <div class="col-card">
+        <h3>Without this</h3>
+        <ul class="tight">
+          <li>Copy-paste content between Claude and WP admin</li>
+          <li>Manually upload template files via FTP</li>
+          <li>No brand context — Claude doesn't know the design</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h3>With this</h3>
+        <ul class="tight">
+          <li>Claude reads existing pages &amp; templates directly</li>
+          <li>Creates and edits files in the active theme</li>
+          <li>Auto-loads design guide before any build task</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h3>Use cases</h3>
+        <ul class="tight">
+          <li>Build new landing page templates</li>
+          <li>Update content on product pages</li>
+          <li>Edit custom post type entries (e.g. customer-segments)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 3. Architecture ── -->
+<div class="slide dark">
+  <div class="slide-label">Architecture</div>
+  <div class="rule"></div>
+  <h2>System overview</h2>
+  <div class="content" style="margin-top: 32px;">
+    <div class="flow">
+      <div class="flow-node teal-node">Claude AI<br><small>Web UI or Desktop</small></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-node">MCP Server<br><small>Node.js · Docker · VPS</small></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-node">WP Plugin<br><small>REST API · theme-editor/v1</small></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-node teal-node">WordPress<br><small>Files · Pages · Posts</small></div>
+    </div>
+    <div class="cols cols-3" style="margin-top: 16px;">
+      <div class="col-card">
+        <h3>Claude client</h3>
+        <ul class="tight">
+          <li>Claude.ai (web) — OAuth 2.0</li>
+          <li>Claude Desktop — Bearer token</li>
+          <li>Any MCP-compatible client</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h3>MCP server</h3>
+        <ul class="tight">
+          <li>Streamable HTTP transport</li>
+          <li>Built-in OAuth 2.0 + PKCE</li>
+          <li>Proxies tool calls to WordPress</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h3>WordPress plugin</h3>
+        <ul class="tight">
+          <li>Custom REST namespace</li>
+          <li>Token-based auth (hashed)</li>
+          <li>Scoped access · IP allowlist</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 4. MCP Tools ── -->
+<div class="slide">
+  <div class="slide-label">Capabilities</div>
+  <div class="rule"></div>
+  <h2>What Claude can do</h2>
+  <div class="content" style="margin-top:28px;">
+    <div class="cols cols-3">
+      <div class="col-card">
+        <h3>Theme files</h3>
+        <ul class="tight">
+          <li><code>list_theme_files</code></li>
+          <li><code>read_theme_file</code></li>
+          <li><code>write_theme_file</code></li>
+          <li><code>create_theme_file</code></li>
+          <li><code>get_design_guidelines</code></li>
+        </ul>
+        <p style="margin-top:10px; font-size:16px; color:#778;">php · css · js · json · html · svg · md</p>
+      </div>
+      <div class="col-card">
+        <h3>Pages</h3>
+        <ul class="tight">
+          <li><code>list_pages</code></li>
+          <li><code>read_page</code></li>
+          <li><code>create_page</code></li>
+          <li><code>update_page</code></li>
+          <li><code>delete_page</code></li>
+        </ul>
+        <p style="margin-top:10px; font-size:16px; color:#778;">Includes page template assignment</p>
+      </div>
+      <div class="col-card">
+        <h3>Posts &amp; CPTs</h3>
+        <ul class="tight">
+          <li><code>list_posts</code></li>
+          <li><code>read_post</code></li>
+          <li><code>create_post</code></li>
+          <li><code>update_post</code></li>
+          <li><code>delete_post</code></li>
+          <li><code>upload_media</code></li>
+        </ul>
+        <p style="margin-top:10px; font-size:16px; color:#778;">Works with any REST-enabled CPT</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 5. Connection flow ── -->
+<div class="slide">
+  <div class="slide-label">Authentication flow</div>
+  <div class="rule"></div>
+  <h2>How a session starts</h2>
+  <div class="content" style="margin-top:28px;">
+    <div class="cols cols-2">
+      <div>
+        <div class="col-card">
+          <h3>Claude.ai (web UI) — OAuth 2.0 + PKCE</h3>
+          <ul class="tight" style="margin-top:8px;">
+            <li>User adds MCP URL to Claude.ai as a remote connector</li>
+            <li>Claude.ai discovers OAuth endpoints via <code>/.well-known/</code></li>
+            <li>User is redirected to the MCP server's login page</li>
+            <li>User enters their personal API key</li>
+            <li>Server issues an authorisation code → exchanges for access token</li>
+            <li>Claude.ai uses the token for all subsequent requests</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="col-card">
+          <h3>Claude Desktop — Bearer token</h3>
+          <ul class="tight" style="margin-top:8px;">
+            <li>User adds MCP URL + <code>Authorization: Bearer &lt;key&gt;</code> to Desktop config</li>
+            <li>Token is sent directly on each request</li>
+            <li>No OAuth redirect needed</li>
+          </ul>
+        </div>
+        <div class="col-card" style="margin-top:24px;">
+          <h3>MCP → WordPress</h3>
+          <ul class="tight" style="margin-top:8px;">
+            <li>Server uses a single shared WP API token stored in <code>.env</code></li>
+            <li>Token is scoped (read / read-write) and expiry-bound</li>
+            <li>Stored as SHA-256 hash in the WordPress DB</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 6. Design guide ── -->
+<div class="slide teal">
+  <div class="slide-label">Design intelligence</div>
+  <div class="rule"></div>
+  <h2>How Claude knows the brand</h2>
+  <div class="content" style="margin-top:28px;">
+    <p style="font-size:22px; max-width:700px;">
+      A <code>design-guide.md</code> file lives in the active WordPress theme root. Every time Claude connects, it is instructed to read this file before building anything.
+    </p>
+    <div class="cols cols-2" style="margin-top:32px;">
+      <div class="col-card">
+        <h3>What the guide contains</h3>
+        <ul class="tight">
+          <li>Brand colours: Teal <code>#2AD2C9</code> · Navy <code>#002A3A</code></li>
+          <li>Horizontal rule above titles — the signature pattern</li>
+          <li>Text link style (border-bottom underline, no arrows)</li>
+          <li>Two-column label + content layout</li>
+          <li>Section types: hero, cards, stats, CTA banner, testimonials</li>
+          <li>What NOT to do: inline styles, colours outside palette</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h3>How it's delivered</h3>
+        <ul class="tight">
+          <li>Stored as <code>design-guide.md</code> in the theme — version-controlled</li>
+          <li>Retrieved on demand via <code>get_design_guidelines</code> tool</li>
+          <li>Updating the file takes effect immediately — no server rebuild</li>
+          <li>MCP server's startup instructions tell Claude to load it first</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 7. Security — auth layers ── -->
+<div class="slide dark">
+  <div class="slide-label">Security</div>
+  <div class="rule"></div>
+  <h2>Authentication layers</h2>
+  <div class="content" style="margin-top: 28px;">
+    <div class="cols cols-2">
+      <div>
+        <div class="sec-item">
+          <div class="sec-num">1</div>
+          <div class="sec-body">
+            <strong>HTTPS everywhere</strong>
+            <span>All traffic encrypted via nginx + Let's Encrypt. WordPress plugin refuses requests without HTTPS.</span>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-num">2</div>
+          <div class="sec-body">
+            <strong>OAuth 2.0 + PKCE (Claude.ai)</strong>
+            <span>S256 code challenge prevents authorisation code interception. No client secret stored on the user's machine.</span>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-num">3</div>
+          <div class="sec-body">
+            <strong>Per-user MCP tokens</strong>
+            <span>Each user has their own <code>label:secret</code> in the server's <code>API_TOKENS</code> env var. Individual access can be revoked without rotating others.</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-item">
+          <div class="sec-num">4</div>
+          <div class="sec-body">
+            <strong>WordPress plugin tokens</strong>
+            <span>Separate 64-char hex token, stored only as SHA-256 hash in the WordPress DB. Never exposed after creation.</span>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-num">5</div>
+          <div class="sec-body">
+            <strong>Token scopes</strong>
+            <span>Read-only vs read-write scope enforced per token. Write permission also requires an explicit <em>allow_writes</em> toggle in WP settings.</span>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-num">6</div>
+          <div class="sec-body">
+            <strong>Token expiry</strong>
+            <span>Each WP token has a set expiry (7 / 30 / 90 / 365 days). Expired tokens are rejected automatically.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 8. Security — file system ── -->
+<div class="slide">
+  <div class="slide-label">Security</div>
+  <div class="rule"></div>
+  <h2>File system &amp; access control</h2>
+  <div class="content" style="margin-top:28px;">
+    <div class="cols cols-2">
+      <div>
+        <div class="col-card">
+          <h3>File system protections</h3>
+          <ul class="tight" style="margin-top:8px;">
+            <li><strong>Path traversal blocked</strong> — <code>realpath()</code> resolves symlinks; any path escaping the theme directory is rejected</li>
+            <li><strong>Extension allowlist</strong> — only <code>php css js json html svg md txt</code> are readable or writable</li>
+            <li><strong>Hard link guard</strong> — files with <code>nlink &gt; 1</code> are rejected to prevent hard-link aliasing</li>
+            <li><strong>File size limit</strong> — reads capped at 1 MiB</li>
+            <li><strong>Atomic creation</strong> — <code>O_EXCL</code> flag prevents create-overwrite race conditions</li>
+            <li><strong>OPcache invalidation</strong> — PHP bytecode cache cleared after every write</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="col-card">
+          <h3>Access control</h3>
+          <ul class="tight" style="margin-top:8px;">
+            <li><strong>IP allowlist</strong> — requests must originate from a configured IP or CIDR range (optional: skippable when behind a CDN)</li>
+            <li><strong>Plugin on/off switch</strong> — entire API can be disabled without removing the plugin</li>
+            <li><strong>Write switch</strong> — writes require both an enabled write policy AND a write-scoped token</li>
+            <li><strong>CPT validation</strong> — custom post type access requires <code>show_in_rest = true</code>; private CPTs and attachments are blocked</li>
+            <li><strong>WP user capability check</strong> — token owner must have <code>edit_themes</code> capability; token does not elevate WP session</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 9. Deployment ── -->
+<div class="slide">
+  <div class="slide-label">Deployment</div>
+  <div class="rule"></div>
+  <h2>Infrastructure setup</h2>
+  <div class="content" style="margin-top:28px;">
+    <div class="cols cols-2">
+      <div class="col-card">
+        <h3>MCP server stack</h3>
+        <ul class="tight" style="margin-top:8px;">
+          <li>Hetzner VPS (<code>116.203.115.78</code>)</li>
+          <li>Docker container — Node.js 22</li>
+          <li>nginx reverse proxy at <code>mcp.ai-circus.net</code></li>
+          <li>Let's Encrypt HTTPS via certbot</li>
+          <li>Path: <code>mcp.ai-circus.net/wp-theme-editor/</code></li>
+          <li>Hub page lists all available MCPs</li>
+          <li>Each MCP has its own landing page with setup guide</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h3>Updating the server</h3>
+        <ul class="tight" style="margin-top:8px;">
+          <li>Source: <code>github.com/ai-circus/wp-theme-mcp</code></li>
+          <li>Update: <code>git pull &amp;&amp; docker compose up -d --build</code></li>
+          <li>WordPress plugin: upload zip via WP admin</li>
+          <li>Design guide: edit <code>design-guide.md</code> in theme — no rebuild needed</li>
+          <li>Secrets in <code>.env</code> — never committed to git</li>
+        </ul>
+      </div>
+    </div>
+    <div style="margin-top:24px; padding:16px; background:var(--light); border-radius:8px;">
+      <p style="font-size:17px; color:#556;"><strong>WordPress side:</strong> staging.contextflow.com sits behind AWS CloudFront. The plugin's "Skip IP check" toggle is enabled so CloudFront's rotating edge IPs don't block the MCP server's requests. Auth relies on the bearer token + HTTPS instead.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── 10. Threat model ── -->
+<div class="slide dark">
+  <div class="slide-label">Security · Threat model</div>
+  <div class="rule"></div>
+  <h2>Threats &amp; mitigations</h2>
+  <div class="content" style="margin-top:24px;">
+    <div class="cols cols-2">
+      <div>
+        <div class="sec-item">
+          <div class="sec-num" style="background:#ff6b6b; color:#fff;">!</div>
+          <div class="sec-body">
+            <strong>Stolen MCP token</strong>
+            <span>Attacker can call MCP tools as that user. <em>Mitigation:</em> revoke token in <code>API_TOKENS</code> env + restart container. Tokens are never logged or stored in plaintext.</span>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-num" style="background:#ff6b6b; color:#fff;">!</div>
+          <div class="sec-body">
+            <strong>Stolen WordPress token</strong>
+            <span>Attacker can call WP REST API directly. <em>Mitigation:</em> revoke via WP Settings. Token only stored as SHA-256 hash — cannot be recovered from DB.</span>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-num" style="background:#ff6b6b; color:#fff;">!</div>
+          <div class="sec-body">
+            <strong>Path traversal attack</strong>
+            <span>Attempt to read <code>../../wp-config.php</code>. <em>Mitigation:</em> <code>realpath()</code> resolves all symlinks; prefix check enforced; <code>..</code> components blocked at input.</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-item">
+          <div class="sec-num" style="background:#ff6b6b; color:#fff;">!</div>
+          <div class="sec-body">
+            <strong>Prompt injection via WP content</strong>
+            <span>Malicious content in a page/post could instruct Claude to take unintended actions. <em>Mitigation:</em> user-in-loop for all destructive actions; Claude is instructed via project instructions.</span>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-num" style="background:#ff6b6b; color:#fff;">!</div>
+          <div class="sec-body">
+            <strong>Unauthorised writes</strong>
+            <span>Read-only token used to attempt writes. <em>Mitigation:</em> scope enforced at plugin level; write policy toggle is a second independent gate.</span>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-num" style="background:#ff6b6b; color:#fff;">!</div>
+          <div class="sec-body">
+            <strong>OAuth code interception</strong>
+            <span>Attacker intercepts authorisation code. <em>Mitigation:</em> PKCE S256 — without the verifier the code is useless. Codes expire after 5 minutes.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 11. Summary ── -->
+<div class="slide teal">
+  <div class="slide-label">Summary</div>
+  <div class="rule"></div>
+  <h2>Key takeaways</h2>
+  <div class="content" style="margin-top:28px;">
+    <div class="cols cols-3">
+      <div class="col-card">
+        <h3>For the team</h3>
+        <ul class="tight">
+          <li>Claude can build, edit, and publish directly on the WordPress site</li>
+          <li>Design guide ensures on-brand output without manual prompting</li>
+          <li>Works from Claude.ai web or Claude Desktop — no local setup</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h3>Security posture</h3>
+        <ul class="tight">
+          <li>Two independent auth layers (MCP + WP)</li>
+          <li>Writes require explicit per-token scope AND a settings toggle</li>
+          <li>File system access strictly sandboxed to active theme</li>
+          <li>Tokens expire and can be individually revoked</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h3>Next steps</h3>
+        <ul class="tight">
+          <li>Upload <code>design-guide.md</code> to the active theme</li>
+          <li>Test <code>get_design_guidelines</code> in a Claude session</li>
+          <li>Build LCS landing page using the new template workflow</li>
+          <li>Consider plugin auto-update via GitHub releases</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<nav>
+  <button class="nav-btn" id="prev" title="Previous (←)">‹</button>
+  <span id="slide-counter">1 / 11</span>
+  <button class="nav-btn" id="next" title="Next (→)">›</button>
+</nav>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let current = 0;
+
+function go(n) {
+  slides[current].classList.remove('active');
+  current = (n + slides.length) % slides.length;
+  slides[current].classList.add('active');
+  document.getElementById('slide-counter').textContent = `${current + 1} / ${slides.length}`;
+}
+
+document.getElementById('prev').addEventListener('click', () => go(current - 1));
+document.getElementById('next').addEventListener('click', () => go(current + 1));
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') go(current + 1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                    go(current - 1);
+});
+</script>
+</body>
+</html>
